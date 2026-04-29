@@ -1,0 +1,4 @@
+POSTGRES_USER=user
+POSTGRES_PASSWORD=pass_2024
+POSTGRES_DB=db
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
