@@ -10,7 +10,9 @@
     "seed": "tsx src/config/seed.ts",
     "lint": "eslint .",
     "test": "jest --runInBand --forceExit",
-    "scaling:redis": "echo '[SCALING] Run: npm install ioredis && npm install -D @types/ioredis'"
+    "scaling:redis": "echo '[SCALING] Run: npm install ioredis && npm install -D @types/ioredis'",
+    "test:unit": "jest --runInBand --forceExit --testPathPattern=__tests__/unit --coverage --coverageReporters=text-summary",
+    "test:ci": "pnpm test:unit --coverageThreshold='{\"global\":{\"lines\":60,\"functions\":60,\"statements\":60,\"branches\":60}}'"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
