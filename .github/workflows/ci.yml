@@ -49,12 +49,13 @@ jobs:
           POSTGRES_DB: ecom_db_test
         ports:
           - 5433:5432 # map container port → runner port
-        options: >-
+        options: |
           # Healthcheck ensures container is "ready"
           --health-cmd "pg_isready -U ecom_user"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
 
     # All commands run inside /server folder by default
     defaults:
