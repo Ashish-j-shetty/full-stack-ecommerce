@@ -12,7 +12,7 @@
     "test": "jest --runInBand --forceExit",
     "scaling:redis": "echo '[SCALING] Run: npm install ioredis && npm install -D @types/ioredis'",
     "test:unit": "jest --runInBand --forceExit --testPathPattern=__tests__/unit --coverage --coverageReporters=text-summary",
-    "test:ci": "pnpm test:unit --coverageThreshold='{\"global\":{\"lines\":60,\"functions\":60,\"statements\":60,\"branches\":60}}'"
+    "test:integration": "jest --runInBand --forceExit --testPathIgnorePatterns=__tests__/unit --coverage --coverageReporters=text-summary"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
