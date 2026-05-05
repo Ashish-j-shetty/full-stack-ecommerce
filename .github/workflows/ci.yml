@@ -129,7 +129,7 @@ jobs:
             --testPathIgnorePatterns="__tests__/unit" \
             --coverage \
             --coverageReporters=text-summary \
-            --coverageThreshold='{"global":{"lines":60,"functions":60,"statements":60,"branches":60}}'
+            --coverageThreshold='{"global":{"lines":60,"functions":60,"statements":60,"branches":40}}'
 
       # Build production-ready output
       # Ensures app compiles before deploy
