@@ -17,3 +17,6 @@ if (fs.existsSync(envPath)) {
       if (!process.env[key]) process.env[key] = val;
     });
 }
+
+// Fallbacks for CI where .env doesn't exist
+if (!process.env.JWT_SECRET) process.env.JWT_SECRET = "test-secret";
