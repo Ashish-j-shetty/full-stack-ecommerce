@@ -50,7 +50,7 @@ jobs:
         ports:
           - 5433:5432 # map container port → runner port
         # Healthcheck ensures container is "ready"
-        options: |
+        options: >-
           --health-cmd "pg_isready -U ecom_user"
           --health-interval 10s
           --health-timeout 5s
