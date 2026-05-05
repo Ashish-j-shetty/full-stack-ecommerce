@@ -1,0 +1,77 @@
+# docker-compose.prod.yml — PRODUCTION
+# Usage: docker compose -f docker-compose.prod.yml up --build
+#
+# Differences from dev:
+#   - Server runs compiled JS (node dist/index.js), not tsx watch
+#   - Client is pre-built static files served by nginx, not Vite dev server
+#   - No volume mounts (code is baked into the images)
+#   - No postgres-test (not needed in production)
+#   - Server port is NOT exposed publicly (only nginx talks to it)
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Database — same as dev but without a host port mapping (not exposed)
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      # Persist data across deployments — without this every deploy wipes the DB.
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Express API server — production build, no dev tools
+  # ---------------------------------------------------------------------------
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      # "production" stage: compiled JS, prod-only deps, non-root user.
+      target: production
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      # "postgres" resolves to the postgres container via Docker's internal DNS.
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
+    # No "ports:" here — the server is NOT exposed to the host machine.
+    # Only the nginx container (on the same Docker network) talks to it.
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Nginx — single public entry point for the entire application
+  # ---------------------------------------------------------------------------
+  nginx:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      # "production" stage: React static files + nginx, no Node.js at all.
+      target: production
+      args:
+        # Empty string = use relative URLs (/api/...) so nginx can proxy them.
+        # The browser calls /api/products → nginx forwards to server:3001/api/products.
+        VITE_API_URL: ""
+    restart: unless-stopped
+    ports:
+      # Only nginx is exposed to the outside world on port 80.
+      # All traffic (static files + API calls) flows through this single port.
+      - "80:80"
+    depends_on:
+      # Ensure the server is up before nginx starts accepting requests.
+      - server
+
+volumes:
+  pgdata:

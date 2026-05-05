@@ -22,7 +22,7 @@ async function loginAsCustomer(): Promise<string[]> {
     .post("/api/auth/login")
     .send({ username: "orderuser", password: "password123" });
 
-  return loginRes.headers["set-cookie"];
+  return loginRes.headers["set-cookie"] as unknown as string[];
 }
 
 async function getFirstProductId(): Promise<number> {

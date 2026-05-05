@@ -1,29 +1,58 @@
+# docker-compose.yml — LOCAL DEVELOPMENT
+# Usage: docker compose up
+#
+# Starts: postgres + postgres-test + server (tsx watch) + client (vite dev)
+# Hot reload is enabled for both server and client via volume mounts.
+
 services:
+
+  # ---------------------------------------------------------------------------
+  # Main database — used by the running server
+  # ---------------------------------------------------------------------------
   postgres:
+    # Use the official Postgres image, Alpine variant (smaller size).
     image: postgres:16-alpine
+
+    # Restart the container automatically unless you explicitly stop it.
     restart: unless-stopped
+
     environment:
+      # These values are read from your .env file at the project root.
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
+    ports:
+      # host:container — exposes Postgres on your machine so you can connect
+      # with a DB client (e.g. TablePlus, psql) at localhost:5432.
+      - "5432:5432"
+
+    volumes:
+      # Named volume — data persists across container restarts/rebuilds.
+      # Without this, your database would be wiped every time you restart.
+      - pgdata:/var/lib/postgresql/data
+
+    healthcheck:
+      # pg_isready checks if Postgres is accepting connections.
+      # Other services use "condition: service_healthy" to wait for this.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s   # run the check every 5 seconds
+      timeout: 5s    # fail the check if it takes longer than 5 seconds
+      retries: 5     # mark unhealthy after 5 consecutive failures
+
+  # ---------------------------------------------------------------------------
+  # Test database — isolated DB used only when running Jest tests
+  # ---------------------------------------------------------------------------
   postgres-test:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Separate database name so tests never touch your development data.
       POSTGRES_DB: ${POSTGRES_DB}_test
     ports:
+      # Mapped to 5433 on the host to avoid conflicting with the main DB on 5432.
       - "5433:5432"
     healthcheck:
       test:
@@ -32,39 +61,58 @@ services:
       timeout: 5s
       retries: 5
 
+  # ---------------------------------------------------------------------------
+  # Express API server — runs in dev mode with hot reload
+  # ---------------------------------------------------------------------------
   server:
     build:
-      context: ./server
-      dockerfile: Dockerfile
+      context: ./server      # build context is the ./server directory
+      dockerfile: Dockerfile # use server/Dockerfile
+      target: dev            # build only up to the "dev" stage (skips builder/production)
     restart: unless-stopped
     ports:
+      # Exposes the API at http://localhost:3001 on your machine.
       - "3001:3001"
     environment:
       NODE_ENV: development
       PORT: 3001
+      # Uses the "postgres" service name — Docker's internal DNS resolves
+      # container names within the same compose network automatically.
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
     volumes:
+      # Mount local source into the container so tsx watch picks up changes.
+      # Editing a .ts file on your machine triggers a server restart instantly.
       - ./server/src:/app/src
       - ./server/migrations:/app/migrations
     depends_on:
       postgres:
+        # Wait until postgres passes its healthcheck before starting the server.
         condition: service_healthy
 
+  # ---------------------------------------------------------------------------
+  # React client — runs Vite dev server with Hot Module Replacement
+  # ---------------------------------------------------------------------------
   client:
     build:
       context: ./client
       dockerfile: Dockerfile
+      target: dev            # build only the "dev" stage (skips builder/production)
     restart: unless-stopped
     ports:
+      # Access the React app at http://localhost:5173
       - "5173:5173"
     environment:
+      # Tells the client where the API lives. In dev, it's directly exposed
+      # at localhost:3001 (no nginx proxy in front of it).
       VITE_API_URL: http://localhost:3001
     volumes:
+      # Hot reload — file changes on your machine sync into the container.
       - ./client/src:/app/src
       - ./client/public:/app/public
       - ./client/index.html:/app/index.html
     depends_on:
+      # Start the server before the client so API calls don't fail on boot.
       - server
 
   # ===========================================================================
@@ -128,6 +176,8 @@ services:
   # ===========================================================================
 
 volumes:
+  # Declares the named volume used by the postgres service above.
+  # Docker manages this on your machine — data survives container restarts.
   pgdata:
   # [SCALING] Uncomment when enabling Redis:
   # redisdata:
