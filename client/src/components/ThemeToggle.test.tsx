@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
+import { describe, it, expect, beforeEach } from "vitest";
 
 // Test component that exposes theme context
 function ThemeDisplay() {

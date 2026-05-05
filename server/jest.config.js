@@ -5,4 +5,5 @@ module.exports = {
   testMatch: ["<rootDir>/__tests__/**/*.test.ts"],
   moduleFileExtensions: ["ts", "js", "json"],
   clearMocks: true,
+  setupFiles: ["./jest.setup.js"],
 };

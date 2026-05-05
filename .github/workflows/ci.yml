@@ -1,0 +1,208 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CI — Server + Client
+# Runs on:
+#   - push to main (actual changes)
+#   - PR to main (pre-merge validation)
+# Goal:
+#   - Catch errors early (type, lint, tests)
+#   - Build artifacts for potential deploy
+# ─────────────────────────────────────────────────────────────────────────────
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Ensures only ONE workflow per branch runs at a time.
+# If you push multiple commits quickly:
+#   → older runs are cancelled
+#   → only latest commit is validated
+# Saves CI time and avoids queue buildup.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  # SERVER JOB
+  # Runs backend checks: type → tests → build
+  # ───────────────────────────────────────────────────────────────────────────
+  server:
+    name: Server
+    runs-on: ubuntu-latest
+
+    # Needed for test reporting (annotations in GitHub UI)
+    permissions:
+      contents: read
+      checks: write
+
+    # Spin up a real Postgres container for integration tests
+    # This mimics production-like behavior (better than mocks)
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ecom_user
+          POSTGRES_PASSWORD: ${{ secrets.CI_DB_PASSWORD }} # never hardcode secrets
+          POSTGRES_DB: ecom_db_test
+        ports:
+          - 5433:5432 # map container port → runner port
+        options: >-
+          # Healthcheck ensures container is "ready"
+          --health-cmd "pg_isready -U ecom_user"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    # All commands run inside /server folder by default
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      # Pull repo code into runner
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Full history helps tools like semantic-release (optional but good)
+
+      # Install pnpm (faster + disk-efficient vs npm/yarn)
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.10.3 # pinned for reproducibility
+
+      # Setup Node + enable dependency caching
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          # Cache is scoped to THIS lockfile (server only)
+          cache-dependency-path: server/pnpm-lock.yaml
+
+      # Install dependencies exactly as lockfile defines
+      # Fails if lockfile is out of sync → ensures consistency
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Catch TypeScript errors BEFORE running tests
+      # Faster feedback, avoids wasted test runs
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+
+      # Extra safety: wait for DB readiness
+      # (GitHub service healthcheck is not always enough)
+      - name: Wait for DB
+        run: |
+          for i in {1..10}; do
+            pg_isready -h localhost -p 5433 -U ecom_user && break
+            echo "Waiting for DB..."
+            sleep 2
+          done
+
+      # Optional: run DB migrations
+      # Needed if your app expects schema to exist before tests
+      # Uncomment if using Prisma / TypeORM / Knex
+      # - name: Run migrations
+      #   env:
+      #     DATABASE_URL: postgres://ecom_user:${{ secrets.CI_DB_PASSWORD }}@localhost:5433/ecom_db_test
+      #   run: pnpm migrate
+      # Run ONLY unit tests (fast, no DB)
+      - name: Unit tests
+        run: |
+          pnpm test -- \
+            --testPathPattern="__tests__/unit" \
+            --coverage \
+            --coverageReporters=text-summary \
+            --coverageThreshold='{"global":{"lines":80}}'
+        # Coverage threshold enforces minimum quality
+
+      # Run integration tests (DB + external interactions)
+      - name: Integration tests
+        env:
+          TEST_DATABASE_URL: postgres://ecom_user:${{ secrets.CI_DB_PASSWORD }}@localhost:5433/ecom_db_test
+          JWT_SECRET: ${{ secrets.CI_JWT_SECRET }}
+          NODE_ENV: test
+        run: |
+          pnpm test -- \
+            --testIgnorePatterns="__tests__/unit" \
+            --coverage \
+            --coverageReporters=text-summary \
+            --coverageThreshold='{"global":{"lines":80}}'
+
+      # Build production-ready output
+      # Ensures app compiles before deploy
+      - name: Build
+        run: pnpm build
+
+      # Save build output as artifact
+      # Used later by deploy job (avoids rebuilding)
+      - name: Upload server artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-dist
+          path: server/dist
+          retention-days: 7 # auto cleanup
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # CLIENT JOB
+  # Runs frontend checks: type → lint → test → build
+  # ───────────────────────────────────────────────────────────────────────────
+  client:
+    name: Client
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      checks: write
+
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.10.3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: client/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Added: Typecheck (important for catching TS issues early)
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+
+      # Lint ensures code quality and consistency
+      - name: Lint
+        run: pnpm lint
+
+      # Run frontend tests
+      - name: Test
+        run: |
+          pnpm test -- \
+            --coverage \
+            --coverageReporters=text-summary \
+            --coverageThreshold='{"global":{"lines":80}}'
+
+      # Build frontend bundle (e.g., Vite/React)
+      - name: Build
+        run: pnpm build
+
+      # Save build output for deploy step
+      - name: Upload client artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-dist
+          path: client/dist
+          retention-days: 7

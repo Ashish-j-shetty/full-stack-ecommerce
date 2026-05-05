@@ -1,9 +1,10 @@
 import { Pool } from "pg";
 import { logger } from "../utils/logger";
 
-const DATABASE_URL =
-  process.env.DATABASE_URL ||
-  "postgres://ecom_user:ecom_pass_2024@localhost:5432/ecom_db";
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  throw new Error("DATABASE_URL environment variable is required");
+}
 
 const pool = new Pool({
   connectionString: DATABASE_URL,

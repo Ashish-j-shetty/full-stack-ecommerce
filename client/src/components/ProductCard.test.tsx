@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { ProductCard } from "./ProductCard";
+import { describe, it, expect } from "vitest";
 
 function renderCard(props = {}) {
   const defaultProps = {

@@ -2,8 +2,11 @@ import { Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { AuthRequest, AppError } from "../types";
 
-const JWT_SECRET =
-  process.env.JWT_SECRET || "fallback-secret-do-not-use-in-production";
+const JWT_SECRET = (() => {
+  const val = process.env.JWT_SECRET;
+  if (!val) throw new Error("JWT_SECRET environment variable is required");
+  return val;
+})();
 
 export function authenticate(
   req: AuthRequest,

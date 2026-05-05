@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { ProtectedRoute } from "./ProtectedRoute";
+import { describe, it, expect, vi } from "vitest";
 
 // Mock the auth context
 const mockUseAuth = vi.fn();

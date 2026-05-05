@@ -75,7 +75,7 @@ services:
       - "3001:3001"
     environment:
       NODE_ENV: development
-      PORT: 3001
+      PORT: ${PORT}
       # Uses the "postgres" service name — Docker's internal DNS resolves
       # container names within the same compose network automatically.
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
@@ -105,7 +105,7 @@ services:
     environment:
       # Tells the client where the API lives. In dev, it's directly exposed
       # at localhost:3001 (no nginx proxy in front of it).
-      VITE_API_URL: http://localhost:3001
+      VITE_API_URL: ${VITE_API_URL}
     volumes:
       # Hot reload — file changes on your machine sync into the container.
       - ./client/src:/app/src

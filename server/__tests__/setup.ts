@@ -4,9 +4,10 @@ import path from "path";
 import { createApp } from "../src/app";
 import express from "express";
 
-const TEST_DATABASE_URL =
-  process.env.TEST_DATABASE_URL ||
-  "postgres://ecom_user:ecom_pass_2024@localhost:5433/ecom_db_test";
+const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;
+if (!TEST_DATABASE_URL) {
+  throw new Error("TEST_DATABASE_URL environment variable is required");
+}
 
 export const testPool = new Pool({ connectionString: TEST_DATABASE_URL });
 
@@ -14,9 +15,7 @@ export const testPool = new Pool({ connectionString: TEST_DATABASE_URL });
 jest.mock("../src/config/db", () => {
   const { Pool } = require("pg");
   const pool = new Pool({
-    connectionString:
-      process.env.TEST_DATABASE_URL ||
-      "postgres://ecom_user:ecom_pass_2024@localhost:5433/ecom_db_test",
+    connectionString: process.env.TEST_DATABASE_URL,
   });
   return {
     __esModule: true,
