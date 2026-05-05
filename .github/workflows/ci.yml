@@ -63,18 +63,18 @@ jobs:
 
     steps:
       # Pull repo code into runner
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           # Full history helps tools like semantic-release (optional but good)
 
       # Install pnpm (faster + disk-efficient vs npm/yarn)
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 8.10.3 # pinned for reproducibility
 
       # Setup Node + enable dependency caching
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: "pnpm"
@@ -139,7 +139,7 @@ jobs:
       # Save build output as artifact
       # Used later by deploy job (avoids rebuilding)
       - name: Upload server artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: server-dist
           path: server/dist
@@ -162,15 +162,15 @@ jobs:
         working-directory: client
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 8.10.3
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: "pnpm"
@@ -197,7 +197,7 @@ jobs:
 
       # Save build output for deploy step
       - name: Upload client artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: client-dist
           path: client/dist
