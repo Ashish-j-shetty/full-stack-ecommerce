@@ -71,7 +71,7 @@ jobs:
       # Install pnpm (faster + disk-efficient vs npm/yarn)
       - uses: pnpm/action-setup@v6
         with:
-          version: 8.10.3 # pinned for reproducibility
+          version: latest # pinned for reproducibility
 
       # Setup Node + enable dependency caching
       - uses: actions/setup-node@v6
@@ -168,7 +168,7 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          version: 8.10.3
+          version: latest
 
       - uses: actions/setup-node@v6
         with:
