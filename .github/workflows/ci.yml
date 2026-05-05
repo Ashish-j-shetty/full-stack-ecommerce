@@ -71,12 +71,12 @@ jobs:
       # Install pnpm (faster + disk-efficient vs npm/yarn)
       - uses: pnpm/action-setup@v6
         with:
-          version: latest # pinned for reproducibility
+          version: 10.33.3 # pinned for reproducibility
 
       # Setup Node + enable dependency caching
       - uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          node-version: "24.15.0"
           cache: "pnpm"
           # Cache is scoped to THIS lockfile (server only)
           cache-dependency-path: server/pnpm-lock.yaml
@@ -168,11 +168,11 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          version: latest
+          version: 10.33.3
 
       - uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          node-version: "24.15.0"
           cache: "pnpm"
           cache-dependency-path: client/pnpm-lock.yaml
 

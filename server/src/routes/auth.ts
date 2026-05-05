@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction } from "express";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import pool from "../config/db";
 import { AuthRequest, AppError } from "../types";
 import {

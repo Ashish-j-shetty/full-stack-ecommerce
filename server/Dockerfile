@@ -1,15 +1,15 @@
 # =============================================================================
 # BASE — shared foundation for all stages
 # =============================================================================
-# node:20-alpine uses Alpine Linux (~5MB) instead of Debian (~900MB), much
+# node:24-alpine uses Alpine Linux (~5MB) instead of Debian (~900MB), much
 # smaller image. We name it "base" so other stages can inherit from it.
-FROM node:22-alpine AS base
+FROM node:24-alpine AS base
 
 # corepack is Node's built-in package manager manager (ships with Node 16.9+).
 # "enable" activates it, "prepare" installs the exact pnpm version we want.
 # Pinning to 8.10.3 (instead of "latest") makes builds deterministic —
 # "latest" can silently change and break your build months later.
-RUN corepack enable && corepack prepare pnpm@8.10.3 --activate
+RUN corepack enable && corepack prepare pnpm@10.33.3 --activate
 
 # All subsequent commands in this stage run from /app inside the container.
 WORKDIR /app
@@ -58,9 +58,9 @@ RUN pnpm run build
 # =============================================================================
 # Starts fresh from node:22-alpine — does NOT inherit node_modules from base.
 # This keeps the final image small by only installing production dependencies.
-FROM node:22-alpine AS production
+FROM node:24-alpine AS production
 
-RUN corepack enable && corepack prepare pnpm@8.10.3 --activate
+RUN corepack enable && corepack prepare pnpm@10.33.3 --activate
 
 WORKDIR /app
 

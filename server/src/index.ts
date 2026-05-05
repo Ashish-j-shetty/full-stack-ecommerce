@@ -1,8 +1,5 @@
-import dotenv from "dotenv";
-import path from "path";
-// Load root .env when running locally (outside Docker).
-// In Docker/CI env vars are injected directly, so this is a safe no-op there.
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+// Must be first import — loads .env before any other module reads process.env
+import "./config/env";
 
 import { createApp } from "./app";
 import { connectWithRetry } from "./config/db";
