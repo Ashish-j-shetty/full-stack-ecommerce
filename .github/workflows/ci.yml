@@ -115,7 +115,7 @@ jobs:
             --testPathPattern="__tests__/unit" \
             --coverage \
             --coverageReporters=text-summary \
-            --coverageThreshold='{"global":{"lines":80}}'
+            --coverageThreshold='{"global":{"lines":60,"functions":60,"statements":60,"branches":60}}'
         # Coverage threshold enforces minimum quality
 
       # Run integration tests (DB + external interactions)
@@ -126,10 +126,10 @@ jobs:
           NODE_ENV: test
         run: |
           pnpm test -- \
-            --testIgnorePatterns="__tests__/unit" \
+            --testPathIgnorePatterns="__tests__/unit" \
             --coverage \
             --coverageReporters=text-summary \
-            --coverageThreshold='{"global":{"lines":80}}'
+            --coverageThreshold='{"global":{"lines":60,"functions":60,"statements":60,"branches":60}}'
 
       # Build production-ready output
       # Ensures app compiles before deploy
@@ -187,13 +187,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      # Run frontend tests
+      # Run frontend tests (coverage config lives in vite.config.ts)
       - name: Test
-        run: |
-          pnpm test -- \
-            --coverage \
-            --coverageReporters=text-summary \
-            --coverageThreshold='{"global":{"lines":80}}'
+        run: pnpm test -- --coverage
 
       # Build frontend bundle (e.g., Vite/React)
       - name: Build

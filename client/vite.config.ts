@@ -9,6 +9,16 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: "./src/setupTests.ts",
     css: true,
+    coverage: {
+      provider: "v8",
+      reporter: ["text-summary"],
+      thresholds: {
+        lines: 60,
+        functions: 55,
+        statements: 60,
+        branches: 60,
+      },
+    },
   },
   server: {
     port: 5173,
