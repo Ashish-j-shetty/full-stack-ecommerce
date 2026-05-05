@@ -1,9 +1,9 @@
 # =============================================================================
 # BASE — shared foundation for dev and builder stages
 # =============================================================================
-# node:20-alpine is a minimal Node image (~130MB vs ~900MB for the full image).
+# node:22-alpine is a minimal Node image (~130MB vs ~900MB for the full image).
 # Named "base" so dev and builder can inherit from it without repeating setup.
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 
 # corepack is Node's built-in package manager manager.
 # Pinning pnpm@8.10.3 ensures every build uses the same version — never "latest"

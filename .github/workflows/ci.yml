@@ -76,7 +76,7 @@ jobs:
       # Setup Node + enable dependency caching
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "pnpm"
           # Cache is scoped to THIS lockfile (server only)
           cache-dependency-path: server/pnpm-lock.yaml
@@ -172,7 +172,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "pnpm"
           cache-dependency-path: client/pnpm-lock.yaml
 

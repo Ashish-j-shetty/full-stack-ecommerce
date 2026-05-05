@@ -13,6 +13,7 @@ export const testPool = new Pool({ connectionString: TEST_DATABASE_URL });
 
 // Override the db module's pool for tests
 jest.mock("../src/config/db", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- jest.mock factory cannot use import()
   const { Pool } = require("pg");
   const pool = new Pool({
     connectionString: process.env.TEST_DATABASE_URL,

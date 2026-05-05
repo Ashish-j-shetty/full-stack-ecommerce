@@ -3,7 +3,7 @@ import pool from "../config/db";
 import { AuthRequest, AppError } from "../types";
 import { authenticate } from "../middleware/auth";
 
-const router = Router();
+const router: Router = Router();
 
 // All cart routes require authentication
 router.use(authenticate);

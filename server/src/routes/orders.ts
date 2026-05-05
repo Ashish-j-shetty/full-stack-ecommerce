@@ -4,7 +4,7 @@ import { AuthRequest, AppError } from "../types";
 import { authenticate } from "../middleware/auth";
 import { isNonEmptyString } from "../middleware/validate";
 
-const router = Router();
+const router: Router = Router();
 
 router.use(authenticate);
 

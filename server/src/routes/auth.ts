@@ -13,7 +13,7 @@ import {
   sanitizeString,
 } from "../middleware/validate";
 
-const router = Router();
+const router: Router = Router();
 
 // POST /api/auth/register
 router.post(

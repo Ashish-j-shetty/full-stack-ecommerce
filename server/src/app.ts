@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Application } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { securityHeaders } from "./middleware/securityHeaders";
@@ -10,7 +10,7 @@ import cartRoutes from "./routes/cart";
 import orderRoutes from "./routes/orders";
 import adminRoutes from "./routes/admin";
 
-export function createApp() {
+export function createApp(): Application {
   const app = express();
 
   // Middleware

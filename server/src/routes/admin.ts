@@ -6,7 +6,7 @@ import { isNonEmptyString, isPositiveNumber } from "../middleware/validate";
 // [SCALING] Redis cache invalidation — clearCache is a no-op when Redis is disabled
 import { clearCache } from "../config/redis";
 
-const router = Router();
+const router: Router = Router();
 
 router.use(authenticate);
 router.use(requireAdmin);

@@ -4,7 +4,7 @@ import { AppError } from "../types";
 // [SCALING] Redis caching — helpers are no-ops when Redis is disabled, safe to import always
 import { getCache, setCache } from "../config/redis";
 
-const router = Router();
+const router: Router = Router();
 
 // GET /api/products
 router.get("/", async (req: Request, res: Response, next: NextFunction) => {

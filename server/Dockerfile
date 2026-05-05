@@ -3,7 +3,7 @@
 # =============================================================================
 # node:20-alpine uses Alpine Linux (~5MB) instead of Debian (~900MB), much
 # smaller image. We name it "base" so other stages can inherit from it.
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 
 # corepack is Node's built-in package manager manager (ships with Node 16.9+).
 # "enable" activates it, "prepare" installs the exact pnpm version we want.
@@ -56,9 +56,9 @@ RUN pnpm run build
 # =============================================================================
 # PRODUCTION — used by docker-compose.prod.yml
 # =============================================================================
-# Starts fresh from node:20-alpine — does NOT inherit node_modules from base.
+# Starts fresh from node:22-alpine — does NOT inherit node_modules from base.
 # This keeps the final image small by only installing production dependencies.
-FROM node:20-alpine AS production
+FROM node:22-alpine AS production
 
 RUN corepack enable && corepack prepare pnpm@8.10.3 --activate
 
