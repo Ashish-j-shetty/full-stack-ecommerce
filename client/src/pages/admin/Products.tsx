@@ -46,6 +46,7 @@ export function AdminProducts() {
     if (editingId && data) {
       const product = data.data.find((p) => p.id === editingId);
       if (product) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional derived state: populate form when editingId changes, no cascade risk
         setForm({
           name: product.name,
           description: product.description || "",

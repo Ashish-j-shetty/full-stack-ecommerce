@@ -61,6 +61,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- refreshCart is async; setState calls happen after await, not synchronously
     refreshCart();
   }, [refreshCart]);
 
