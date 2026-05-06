@@ -62,10 +62,10 @@ export function generateToken(user: {
 }
 
 export function getCookieOptions() {
-  const isProduction = process.env.NODE_ENV === "production";
+  // const isProduction = process.env.NODE_ENV === "production";
   return {
     httpOnly: true,
-    secure: isProduction,
+    secure: false, //isProduction setting this false even in prodcutnion as curretnly there is no domain and no htts setup
     sameSite: "strict" as const,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     path: "/",
