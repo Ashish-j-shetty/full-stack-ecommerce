@@ -18,13 +18,13 @@ Step-by-step guide to setting up a free AMD compute instance on Oracle Cloud Inf
 
 ## Instance specs (Always Free)
 
-| Resource | Value                                 |
-| -------- | ------------------------------------- |
-| Shape    | VM.Standard.E2.1.Micro                |
-| OCPU     | 1 (AMD)                               |
-| RAM      | 1 GB                                  |
-| Storage  | 50 GB boot volume                     |
-| Cost     | Always free — no credit card required |
+| Resource | Value                  |
+| -------- | ---------------------- |
+| Shape    | VM.Standard.E2.1.Micro |
+| OCPU     | 1 (AMD)                |
+| RAM      | 1 GB                   |
+| Storage  | 50 GB boot volume      |
+| Cost     | Always free            |
 
 ---
 
@@ -102,7 +102,7 @@ OCI has two firewall layers — both must be configured.
 SSH into your instance from your local machine:
 
 ```bash
-ssh -i ~/.ssh/id_ed25519_oci ubuntu@<YOUR_PUBLIC_IP>
+ssh -i ~/.ssh/id_ed25519_oci ubuntu@144.24.126.106
 ```
 
 Once inside the server (prompt shows `ubuntu@myapp-server:~$`), run:
@@ -373,84 +373,18 @@ cat ~/.ssh/id_ed25519_oci
 # -----END OPENSSH PRIVATE KEY-----
 ```
 
-### 8b. Create `.github/workflows/cd.yml`
+### 8b. CD workflow (`.github/workflows/cd.yml`)
 
-```yaml
-# ─────────────────────────────────────────────────────────────────────────────
-# CD — Build, Push, Deploy
-# Runs on:
-#   - push to main ONLY after CI passes
-# Goal:
-#   - Build Docker images for server + client/nginx
-#   - Push to GitHub Container Registry (GHCR) — free, private
-#   - SSH into OCI server and pull + restart containers
-# ─────────────────────────────────────────────────────────────────────────────
-name: CD
+The workflow file already exists in the repo. It does the following steps automatically after CI passes:
 
-on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
-    branches: [main]
+1. Checks out the code
+2. Logs in to GHCR using `GITHUB_TOKEN`
+3. Builds and pushes the server Docker image (`target: production`)
+4. Builds and pushes the client/nginx Docker image (`target: production`)
+5. SSHs into the OCI server and runs `docker compose up -d --pull always --remove-orphans`
+6. Prunes old unused images to keep disk usage low
 
-concurrency:
-  group: cd-production
-  cancel-in-progress: false
-
-jobs:
-  deploy:
-    name: Deploy to OCI
-    runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push server image
-        uses: docker/build-push-action@v7
-        with:
-          context: ./server
-          dockerfile: ./server/Dockerfile
-          target: production
-          push: true
-          tags: ghcr.io/ashish-j-shetty/full-stack-ecommerce-server:latest
-
-      - name: Build and push client image
-        uses: docker/build-push-action@v7
-        with:
-          context: ./client
-          dockerfile: ./client/Dockerfile
-          target: production
-          push: true
-          build-args: |
-            VITE_API_URL=
-          tags: ghcr.io/ashish-j-shetty/full-stack-ecommerce-client:latest
-
-      - name: Deploy to OCI server
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.OCI_HOST }}
-          username: ubuntu
-          key: ${{ secrets.OCI_SSH_KEY }}
-          script: |
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ashish-j-shetty --password-stdin
-            docker pull ghcr.io/ashish-j-shetty/full-stack-ecommerce-server:latest
-            docker pull ghcr.io/ashish-j-shetty/full-stack-ecommerce-client:latest
-            cd ~/app
-            docker compose -f docker-compose.prod.yml --env-file .env up -d --pull always --remove-orphans
-            docker image prune -f
-```
+No manual steps needed — just ensure the two GitHub secrets (`OCI_HOST`, `OCI_SSH_KEY`) are set as described in 8a.
 
 ### 8c. Copy docker-compose.prod.yml to server (one time only)
 
@@ -493,9 +427,9 @@ CD runs:
 - [x] GitHub Secrets added (`OCI_HOST`, `OCI_SSH_KEY`)
 - [x] CD workflow created (`.github/workflows/cd.yml`)
 - [x] `docker-compose.prod.yml` copied to server
-- [ ] Push to main and verify first deploy succeeds
+- [x] Push to main and verify first deploy succeeds
 - [ ] Connect to Postgres via TablePlus SSH tunnel
-- [ ] HTTPS with Let's Encrypt (Certbot)
+- [-] HTTPS with Let's Encrypt (Certbot) (not now as needs domain for this )
 
 ---
 
@@ -510,14 +444,18 @@ CD runs:
 
 ## Troubleshooting
 
-| Problem                        | Fix                                                                 |
-| ------------------------------ | ------------------------------------------------------------------- |
-| SSH times out                  | Check port 22 exists in OCI Security List                           |
-| Subnet CIDR overlap error      | Select existing subnet instead of creating new                      |
-| Can't reach port 80/443        | Check both OCI Security List AND iptables rules                     |
-| AMD shape not visible          | It's under "Specialty and previous generation" tab — this is normal |
-| Docker install looks stuck     | The `apt-get update` step takes 2–4 minutes — wait, do not Ctrl+C   |
-| `docker` command requires sudo | Run `sudo usermod -aG docker ubuntu` then `newgrp docker`           |
-| CD workflow not triggering     | Check CI workflow name matches exactly: `workflows: ["CI"]`         |
-| GHCR push permission denied    | Ensure `packages: write` is in CD workflow permissions              |
-| Server can't pull from GHCR    | Check `GITHUB_TOKEN` login step in deploy script                    |
+| Problem                                                            | Fix                                                                                                                                                                                                                                                                                                             |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SSH times out                                                      | Check port 22 exists in OCI Security List                                                                                                                                                                                                                                                                       |
+| Subnet CIDR overlap error                                          | Select existing subnet instead of creating new                                                                                                                                                                                                                                                                  |
+| Can't reach port 80/443                                            | Check both OCI Security List AND iptables rules                                                                                                                                                                                                                                                                 |
+| AMD shape not visible                                              | It's under "Specialty and previous generation" tab — this is normal                                                                                                                                                                                                                                             |
+| Docker install looks stuck                                         | The `apt-get update` step takes 2–4 minutes — wait, do not Ctrl+C                                                                                                                                                                                                                                               |
+| `docker` command requires sudo                                     | Run `sudo usermod -aG docker ubuntu` then `newgrp docker`                                                                                                                                                                                                                                                       |
+| CD workflow not triggering                                         | Check CI workflow name matches exactly: `workflows: ["CI"]`                                                                                                                                                                                                                                                     |
+| GHCR push permission denied                                        | Ensure `packages: write` is in CD workflow permissions                                                                                                                                                                                                                                                          |
+| Server can't pull from GHCR                                        | Check `GITHUB_TOKEN` login step in deploy script                                                                                                                                                                                                                                                                |
+| `password authentication failed for user` (502 on startup)         | `POSTGRES_PASSWORD` in `.env` does not match the password the `pgdata` volume was initialised with. Stop all containers, delete the volume (`docker volume rm ecom_fullstack_pgdata`), ensure both `POSTGRES_PASSWORD` and the password in `DATABASE_URL` are identical, then redeploy. You will lose all data. |
+| `ENOENT: no such file or directory, scandir '/app/migrations'`     | The `migrations/` directory is not copied into the server Docker image. Add `COPY --from=builder /app/migrations ./migrations` after the `dist` copy in `server/Dockerfile` (production stage) and redeploy.                                                                                                    |
+| All `/api/*` routes return 404                                     | The nginx `proxy_pass` has a trailing slash (`http://server:3001/`) which strips the `/api/` prefix before forwarding. Change it to `http://server:3001` (no trailing slash) in `client/nginx.conf` and redeploy.                                                                                               |
+| Protected routes (e.g. `/cart`) return 401 in prod but work in dev | The JWT cookie is set with `secure: true` in production, which the browser will only send over HTTPS. Since the server runs on plain HTTP (no domain/certificate), set `secure: false` in `getCookieOptions()` in `server/src/middleware/auth.ts`. Re-enable when HTTPS is set up.                              |
