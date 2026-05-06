@@ -1,7 +1,8 @@
 # docker-compose.prod.yml — PRODUCTION
-# Usage: docker compose -f docker-compose.prod.yml up --build
+# Usage: docker compose -f docker-compose.prod.yml --env-file .env up -d
 #
 # Differences from dev:
+#   - Images are pre-built and pulled from GHCR (not built locally)
 #   - Server runs compiled JS (node dist/index.js), not tsx watch
 #   - Client is pre-built static files served by nginx, not Vite dev server
 #   - No volume mounts (code is baked into the images)
@@ -22,7 +23,8 @@ services:
     volumes:
       # Persist data across deployments — without this every deploy wipes the DB.
       - pgdata:/var/lib/postgresql/data
-    # ADD THIS — caps Postgres RAM usage on your 1 GB server
+    # Caps Postgres RAM usage on a 1 GB server.
+    # Without this Postgres grabs as much RAM as it wants and starves Node.
     command: >
       postgres
       -c shared_buffers=128MB
@@ -36,20 +38,19 @@ services:
       retries: 5
 
   # ---------------------------------------------------------------------------
-  # Express API server — production build, no dev tools
+  # Express API server — pulls pre-built image from GHCR
+  # Built by GitHub Actions CD workflow on every push to main
   # ---------------------------------------------------------------------------
   server:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-      # "production" stage: compiled JS, prod-only deps, non-root user.
-      target: production
+    # Pull the pre-built image from GitHub Container Registry.
+    # CD workflow builds and pushes this on every successful CI run.
+    image: ghcr.io/ashish-j-shetty/full-stack-ecommerce-server:latest
     restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: 3001
       # "postgres" resolves to the postgres container via Docker's internal DNS.
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
     # No "ports:" here — the server is NOT exposed to the host machine.
     # Only the nginx container (on the same Docker network) talks to it.
@@ -59,26 +60,24 @@ services:
 
   # ---------------------------------------------------------------------------
   # Nginx — single public entry point for the entire application
+  # Serves React static files + proxies /api/* to the server container
+  # Built by GitHub Actions CD workflow on every push to main
   # ---------------------------------------------------------------------------
   nginx:
-    build:
-      context: ./client
-      dockerfile: Dockerfile
-      # "production" stage: React static files + nginx, no Node.js at all.
-      target: production
-      args:
-        # Empty string = use relative URLs (/api/...) so nginx can proxy them.
-        # The browser calls /api/products → nginx forwards to server:3001/api/products.
-        VITE_API_URL: ""
+    # Pull the pre-built image from GitHub Container Registry.
+    # This image contains the React build output + nginx config.
+    image: ghcr.io/ashish-j-shetty/full-stack-ecommerce-client:latest
     restart: unless-stopped
     ports:
-      # Only nginx is exposed to the outside world on port 80.
-      # All traffic (static files + API calls) flows through this single port.
+      # Only nginx is exposed to the outside world.
+      # All traffic (static files + API calls) flows through these ports.
       - "80:80"
-      - "443:443" # ADD THIS for HTTPS/Certbot later
+      - "443:443" # Required for HTTPS/Certbot later
     depends_on:
       # Ensure the server is up before nginx starts accepting requests.
       - server
 
 volumes:
+  # Named volume for Postgres data.
+  # Data persists across container restarts and deployments.
   pgdata:
