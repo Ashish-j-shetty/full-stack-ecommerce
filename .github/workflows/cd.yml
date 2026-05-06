@@ -1,0 +1,95 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CD — Build, Push, Deploy
+# Runs on:
+#   - push to main ONLY after CI passes
+# Goal:
+#   - Build Docker images for server + client/nginx
+#   - Push to GitHub Container Registry (GHCR) — free, private
+#   - SSH into OCI server and pull + restart containers
+# ─────────────────────────────────────────────────────────────────────────────
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"] # waits for your existing CI workflow
+    types: [completed]
+    branches: [main]
+
+# Only one deploy at a time — never overlap deploys
+concurrency:
+  group: cd-production
+  cancel-in-progress: false # never cancel a running deploy
+
+jobs:
+  deploy:
+    name: Deploy to OCI
+    runs-on: ubuntu-latest
+
+    # Only deploy if CI actually passed — not if it failed or was cancelled
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    # Needed to push images to GHCR
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # ── 1. Checkout code ──────────────────────────────────────────────────
+      - uses: actions/checkout@v4
+
+      # ── 2. Log in to GHCR (GitHub's free Docker registry) ────────────────
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }} # auto-provided, no setup needed
+
+      # ── 3. Build and push server image ───────────────────────────────────
+      - name: Build and push server image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          dockerfile: ./server/Dockerfile
+          target: production
+          push: true
+          # Image URL: ghcr.io/ashish-j-shetty/full-stack-ecommerce-server:latest
+          tags: ghcr.io/ashish-j-shetty/full-stack-ecommerce-server:latest
+
+      # ── 4. Build and push client/nginx image ─────────────────────────────
+      - name: Build and push client image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./client
+          dockerfile: ./client/Dockerfile
+          target: production
+          push: true
+          # Empty VITE_API_URL = use relative URLs (/api/...) — nginx proxies them
+          build-args: |
+            VITE_API_URL=
+          tags: ghcr.io/ashish-j-shetty/full-stack-ecommerce-client:latest
+
+      # ── 5. SSH into OCI server and deploy ────────────────────────────────
+      - name: Deploy to OCI server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ubuntu
+          key: ${{ secrets.OCI_SSH_KEY }}
+          script: |
+            # Log in to GHCR from the server
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ashish-j-shetty --password-stdin
+
+            # Pull latest images
+            docker pull ghcr.io/ashish-j-shetty/full-stack-ecommerce-server:latest
+            docker pull ghcr.io/ashish-j-shetty/full-stack-ecommerce-client:latest
+
+            # Go to app folder
+            cd ~/app
+
+            # Copy latest compose file from repo (already pulled by checkout)
+            # Restart containers with new images — zero manual steps
+            docker compose -f docker-compose.prod.yml --env-file .env up -d --pull always --remove-orphans
+
+            # Clean up old unused images (keeps disk usage low on 50GB disk)
+            docker image prune -f

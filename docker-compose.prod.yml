@@ -9,7 +9,6 @@
 #   - Server port is NOT exposed publicly (only nginx talks to it)
 
 services:
-
   # ---------------------------------------------------------------------------
   # Database — same as dev but without a host port mapping (not exposed)
   # ---------------------------------------------------------------------------
@@ -23,6 +22,13 @@ services:
     volumes:
       # Persist data across deployments — without this every deploy wipes the DB.
       - pgdata:/var/lib/postgresql/data
+    # ADD THIS — caps Postgres RAM usage on your 1 GB server
+    command: >
+      postgres
+      -c shared_buffers=128MB
+      -c effective_cache_size=256MB
+      -c work_mem=4MB
+      -c maintenance_work_mem=32MB
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -69,6 +75,7 @@ services:
       # Only nginx is exposed to the outside world on port 80.
       # All traffic (static files + API calls) flows through this single port.
       - "80:80"
+      - "443:443" # ADD THIS for HTTPS/Certbot later
     depends_on:
       # Ensure the server is up before nginx starts accepting requests.
       - server
