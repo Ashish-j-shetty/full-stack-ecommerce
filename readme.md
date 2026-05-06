@@ -15,59 +15,32 @@ A production-ready e-commerce application built with **React 19 + TypeScript**, 
 
 ## Architecture
 
-### Production (OCI)
+### Local Development
 
 ```mermaid
 graph LR
-  Browser -->|HTTP :80| Nginx
-
-  subgraph OCI["OCI Free Tier VM"]
-    subgraph Docker["Docker Network"]
-      Nginx["nginx:alpine\n:80 public\nReact static + /api/* proxy"]
-      Express["node:24-alpine\n:3001 internal\nExpress API · JWT · Rate limit"]
-      PG[("postgres:16\ninternal\npgdata volume")]
-    end
-  end
-
-  GHCR["GHCR\nghcr.io"]
-
-  Nginx -->|/api/* proxy| Express
-  Express -->|SQL| PG
-  GHCR -->|docker pull on deploy| Docker
+  Browser -->|:5173| Vite["Vite :5173"] -->|:3001| Express["Express :3001"] --> PG[("PG :5432")]
+  Jest["Jest"] -->|supertest| Express
+  Jest --> PGTest[("PG Test :5433")]
 ```
 
 ### CI/CD Pipeline
 
 ```mermaid
 flowchart LR
-  Push["git push main"] --> CI
-
-  subgraph CI["GitHub Actions — CI"]
-    direction TB
-    t["Typecheck"] --> l["Lint"] --> u["Unit Tests"] --> i["Integration Tests"] --> b["Build"]
-  end
-
-  subgraph CD["GitHub Actions — CD"]
-    direction TB
-    bi["Build server image"] --> bc["Build client image"] --> push["Push to GHCR"] --> deploy["SSH → OCI\ndocker compose up"]
-  end
-
-  CI -->|passes| CD
+  Push["git push main"] -->|triggers| CI["CI\ntypecheck · lint · test · build"] -->|passes| CD["CD\nbuild images · push GHCR\nSSH → docker compose up"]
 ```
 
-### Local Development
+### Production (OCI)
 
 ```mermaid
 graph LR
-  Browser -->|":5173"| Vite
-
-  subgraph Docker["docker compose up"]
-    Vite["Vite dev server\n:5173 · hot reload"] -->|":3001"| Express["Express tsx watch\n:3001 · hot reload"]
-    Express --> PG[("PostgreSQL\n:5432")]
+  Browser -->|HTTP :80| Nginx["nginx :80"]
+  subgraph OCI["OCI — Docker Network"]
+    Nginx -->|/api/*| Express["Express :3001"]
+    Express --> PG[("PostgreSQL\npgdata volume")]
   end
-
-  Jest["Jest Tests"] -->|supertest| Express
-  Jest -->|TEST_DATABASE_URL| PGTest[("PostgreSQL Test\n:5433")]
+  GHCR["GHCR"] -->|pull on deploy| OCI
 ```
 
 ## Prerequisites
