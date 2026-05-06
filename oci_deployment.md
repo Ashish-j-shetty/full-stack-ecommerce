@@ -411,14 +411,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push server image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./server
           dockerfile: ./server/Dockerfile
@@ -427,7 +427,7 @@ jobs:
           tags: ghcr.io/ashish-j-shetty/full-stack-ecommerce-server:latest
 
       - name: Build and push client image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./client
           dockerfile: ./client/Dockerfile

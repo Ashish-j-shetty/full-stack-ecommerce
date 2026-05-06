@@ -77,6 +77,8 @@ RUN pnpm install --frozen-lockfile --prod
 # Copy only the compiled JS from the builder stage — no TypeScript source,
 # no node_modules from builder. This is what "multi-stage build" means.
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/migrations ./migrations
+
 
 # Create a non-root user and group. Containers run as root by default which
 # is a security risk — if the app is compromised, the attacker gets root.
