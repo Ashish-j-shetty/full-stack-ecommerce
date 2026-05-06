@@ -19,28 +19,41 @@ A production-ready e-commerce application built with **React 19 + TypeScript**, 
 
 ```mermaid
 graph LR
-  Browser -->|:5173| Vite["Vite :5173"] -->|:3001| Express["Express :3001"] --> PG[("PG :5432")]
+  Browser -->|:5173| Vite
+  subgraph Docker["docker compose up"]
+    Vite["Vite :5173"] -->|:3001| Express["Express :3001"] --> PG[("PG :5432")]
+    PGTest[("PG Test :5433")]
+  end
   Jest["Jest"] -->|supertest| Express
-  Jest --> PGTest[("PG Test :5433")]
+  Jest --> PGTest
 ```
 
 ### CI/CD Pipeline
 
 ```mermaid
 flowchart LR
-  Push["git push main"] -->|triggers| CI["CI\ntypecheck · lint · test · build"] -->|passes| CD["CD\nbuild images · push GHCR\nSSH → docker compose up"]
+  Push["git push main"] -->|triggers| CI
+  subgraph CI["GitHub Actions — CI"]
+    t["typecheck · lint · test · build"]
+  end
+  subgraph CD["GitHub Actions — CD"]
+    d["build images · push GHCR · docker compose up"]
+  end
+  CI -->|passes| CD
 ```
 
 ### Production (OCI)
 
 ```mermaid
 graph LR
-  Browser -->|HTTP :80| Nginx["nginx :80"]
-  subgraph OCI["OCI — Docker Network"]
-    Nginx -->|/api/*| Express["Express :3001"]
-    Express --> PG[("PostgreSQL\npgdata volume")]
+  Browser -->|HTTP :80| Nginx
+  subgraph OCI["OCI Free Tier VM"]
+    subgraph Docker["Docker Network"]
+      Nginx["nginx :80"] -->|/api/*| Express["Express :3001"]
+      Express --> PG[("PostgreSQL\npgdata volume")]
+    end
   end
-  GHCR["GHCR"] -->|pull on deploy| OCI
+  GHCR["GHCR"] -->|pull on deploy| Docker
 ```
 
 ## Prerequisites
