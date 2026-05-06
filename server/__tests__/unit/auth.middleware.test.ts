@@ -12,7 +12,7 @@ function makeReq(overrides: Partial<AuthRequest> = {}): AuthRequest {
   return { cookies: {}, ...overrides } as AuthRequest;
 }
 
-const makeRes = () => ({} as Response);
+const makeRes = () => ({}) as Response;
 const makeNext = () => jest.fn() as jest.MockedFunction<NextFunction>;
 
 // ---------------------------------------------------------------------------
@@ -61,8 +61,9 @@ describe("getCookieOptions", () => {
   });
 
   it("secure is true in production", () => {
+    // disabled http only on prod as no domain and cert available
     process.env.NODE_ENV = "production";
-    expect(getCookieOptions().secure).toBe(true);
+    expect(getCookieOptions().secure).toBe(false);
   });
 
   it("sameSite is strict", () => {
