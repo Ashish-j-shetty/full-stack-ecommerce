@@ -50,7 +50,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: ./server
-          dockerfile: ./server/Dockerfile
+          file: ./server/Dockerfile
           target: production
           push: true
           # Image URL: ghcr.io/ashish-j-shetty/full-stack-ecommerce-server:latest
@@ -61,7 +61,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: ./client
-          dockerfile: ./client/Dockerfile
+          file: ./client/Dockerfile
           target: production
           push: true
           # Empty VITE_API_URL = use relative URLs (/api/...) — nginx proxies them
