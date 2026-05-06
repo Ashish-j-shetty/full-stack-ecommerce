@@ -13,6 +13,63 @@ A production-ready e-commerce application built with **React 19 + TypeScript**, 
 - **Dark/Light Theme** — Toggle with localStorage persistence
 - **Toast Notifications** — User feedback for all actions
 
+## Architecture
+
+### Production (OCI)
+
+```mermaid
+graph LR
+  Browser -->|HTTP :80| Nginx
+
+  subgraph OCI["OCI Free Tier VM"]
+    subgraph Docker["Docker Network"]
+      Nginx["nginx:alpine\n:80 public\nReact static + /api/* proxy"]
+      Express["node:24-alpine\n:3001 internal\nExpress API · JWT · Rate limit"]
+      PG[("postgres:16\ninternal\npgdata volume")]
+    end
+  end
+
+  GHCR["GHCR\nghcr.io"]
+
+  Nginx -->|/api/* proxy| Express
+  Express -->|SQL| PG
+  GHCR -->|docker pull on deploy| Docker
+```
+
+### CI/CD Pipeline
+
+```mermaid
+flowchart LR
+  Push["git push main"] --> CI
+
+  subgraph CI["GitHub Actions — CI"]
+    direction TB
+    t["Typecheck"] --> l["Lint"] --> u["Unit Tests"] --> i["Integration Tests"] --> b["Build"]
+  end
+
+  subgraph CD["GitHub Actions — CD"]
+    direction TB
+    bi["Build server image"] --> bc["Build client image"] --> push["Push to GHCR"] --> deploy["SSH → OCI\ndocker compose up"]
+  end
+
+  CI -->|passes| CD
+```
+
+### Local Development
+
+```mermaid
+graph LR
+  Browser -->|":5173"| Vite
+
+  subgraph Docker["docker compose up"]
+    Vite["Vite dev server\n:5173 · hot reload"] -->|":3001"| Express["Express tsx watch\n:3001 · hot reload"]
+    Express --> PG[("PostgreSQL\n:5432")]
+  end
+
+  Jest["Jest Tests"] -->|supertest| Express
+  Jest -->|TEST_DATABASE_URL| PGTest[("PostgreSQL Test\n:5433")]
+```
+
 ## Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
